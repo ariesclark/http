@@ -1,11 +1,12 @@
 {
   "name": "@rubybb/http",
+  "type": "module",
   "version": "1.0.1",
   "description": "Simple and extendable http lib for sending requests.",
   "main": "index.js",
   "scripts": {
     "build": "tsc --build tsconfig.json",
-    "release": ""
+    "release": "npm publish"
   },
   "repository": {
     "type": "git",
