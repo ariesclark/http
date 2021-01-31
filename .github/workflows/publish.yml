@@ -10,11 +10,14 @@ jobs:
         with:
           node-version: "14"
       - name: login to npm
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_ACCESS_TOKEN }}" > ~/.npmrc
-        run: git config --global user.name "rubybb"
-        run: npm whoami
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_ACCESS_TOKEN }}" > ~/.npmrc
+          git config --global user.name "rubybb"
+          npm whoami
       - name: install dependencies
-        run: npm i
+        run: |
+          npm i
       - name: release package
-        run: npm version minor
-        run: npm run release
+        run: |
+          npm version minor
+          npm run release
