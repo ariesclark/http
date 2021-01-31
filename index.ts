@@ -35,15 +35,13 @@ export declare interface HTTPOptions extends RequestInit {
     [key: string]: unknown
 }
 
-export let _fetch = null;
+let _fetch = null;
 async function fetch (input: RequestInfo, init?: RequestInit): Promise<Response> {
     if (!_fetch) {
         /* if server or client side */
         _fetch = (typeof window === "undefined") ?
             (await import("node-fetch")).default : 
-            window.fetch;
-
-        _fetch.server = typeof window === "undefined";
+            (await import("whatwg-fetch")).fetch;
     }
 
     return _fetch(input, init);

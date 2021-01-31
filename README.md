@@ -1,9 +1,11 @@
 # @rubybb/http
-Simple and extendable http lib for sending requests.
+Simple, small and extendable http library for sending requests.
 
 [![Discord](https://img.shields.io/discord/418093857394262020?label=discord&style=for-the-badge)](https://discord.gg/WUgGJhS) [![Maintenance](https://img.shields.io/maintenance/yes/2021?style=for-the-badge)]() ![GitHub issues](https://img.shields.io/github/issues/rubybb/http?style=for-the-badge) ![npm bundle size (scoped)](https://img.shields.io/bundlephobia/min/@rubybb/http?style=for-the-badge) ![NPM](https://img.shields.io/npm/l/@rubybb/http?style=for-the-badge)
 
 ## Install
+Available on NPM: [@rubybb/http](https://www.npmjs.com/package/@rubybb/http)
+
 Ruby's recommended package manager: <br/>
 [pnpm: 📦🚀 Fast, disk space efficient package manager](https://pnpm.js.org/).
 
@@ -79,9 +81,4 @@ http.put (path: string, body: BodyInit, options: Partial<HTTPOptions> = {}): Pro
 
 // send a request with the delete method and an optional body.
 http.delete (path: string, body?: BodyInit, options: Partial<HTTPOptions> = {}): Promise<unknown>;
-
-
-
-
-
 ```
