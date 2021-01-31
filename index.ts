@@ -15,63 +15,106 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import merge from "deepmerge";
+import { compile } from "path-to-regexp";
+import deepmerge from "deepmerge";
 
-export interface HTTP {
-    options: Partial<HTTPOptions>;
-    mutate: (defaults: Partial<HTTPOptions>) => HTTP;
+export declare type PartialHTTPOptions = Partial<HTTPOptions>;
 
-    request: <ResultType>(path: string, options: Partial<HTTPOptions>) => Promise<ResultType>;
+export declare type RequestFunction = <ResultType>(path: string, options?: PartialHTTPOptions) => Promise<ResultType>;
+export declare type RequestFunctionWithBody = <ResultType>(path: string, body: string, options?: PartialHTTPOptions) => Promise<ResultType>;
+export declare type RequestFunctionWithOptionalBody = <ResultType>(path: string, body?: string, options?: PartialHTTPOptions) => Promise<ResultType>;
 
-    get: <ResultType>(path: string, options?: Partial<HTTPOptions>) => Promise<ResultType>;
-    post: <ResultType>(path: string, body: string, options?: Partial<HTTPOptions>) => Promise<ResultType>;
-}
-
-export interface HTTPOptions extends RequestInit {
+export declare interface HTTPOptions extends RequestInit {
     resultType: "response" | keyof Response;
     excludeDefaults: boolean;
     baseURL: string;
+
+    debug: boolean;
+
+    /* for path/query params */
+    [key: string]: unknown
 }
 
-const http: HTTP = {
-    options: {},
+export let _fetch = null;
+async function fetch (input: RequestInfo, init?: RequestInit): Promise<Response> {
+    if (!_fetch) {
+        /* if server or client side */
+        _fetch = (typeof window === "undefined") ?
+            (await import("node-fetch")).default : 
+            window.fetch;
 
-    mutate (this: HTTP, defaults: Partial<HTTPOptions>): HTTP {
-        const clone = Object.assign({}, this);
-        clone.options = merge(clone.options, defaults);
+        _fetch.server = typeof window === "undefined";
+    }
 
-        return clone;
-    },
+    return _fetch(input, init);
+}
 
-    async request <ResultType>(this: HTTP, path: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
-        const request_options = this.options.excludeDefaults ? options : merge(this.options, options);
-        const request_url = this.options.baseURL ? this.options.baseURL + path : path;
-        let {resultType} = request_options;
+export class HTTP {
+    constructor (private options: PartialHTTPOptions = {}, private immutable = false) {}
 
-        const fetch = (
-            (typeof window === "undefined") ?
-                // @ts-ignore ?: "@types/node-fetch" causes more problems than it fixes.
-                (await import("node-fetch")).default : 
-                window.fetch
-        );
+    static create (options: PartialHTTPOptions, immutable?: boolean): HTTP {
+        return new HTTP(options, immutable);
+    }
+
+    public mutate (this: HTTP, options: PartialHTTPOptions): HTTP {
+        if (this.immutable) throw new ReferenceError("Cannot modify; HTTP instance declared as immutable");
+
+        this.options = deepmerge(this.options, options);
+        return this;
+    }
+
+    public clone (this: HTTP, options: PartialHTTPOptions, immutable?: boolean): HTTP {
+        return new HTTP(deepmerge(this.options, options), immutable);
+    }
+
+    private async request <ResultType>(this: HTTP, path: string, options: PartialHTTPOptions = {}): Promise<ResultType> {
+        options = this.options.excludeDefaults ? options : deepmerge(this.options, options);
         
-        const response = await fetch(request_url, request_options) as Response; 
-  
-        if (!resultType || !Object.prototype.hasOwnProperty.call(response, resultType)) resultType = "response";
-        if (resultType === "response") return (response as unknown) as ResultType;
+        /* handle url creation */
+        const _url = new URL(path, this.options.baseURL);
+        const url = _url.pathname.includes(":") ? 
+            _url.href.replace(_url.pathname, compile(_url.pathname)(options)) :
+            _url.href;
+            
+        options.debug && console.debug({path, url, options});
+        
+        const response = await fetch(url, options);
 
-        const result = response[resultType];
-        return typeof result === "function" ? result() : result;
-    },
+        if (options.resultType === "response") return (response as unknown) as ResultType; 
+        if (!options.resultType || !response[options.resultType]) throw new TypeError("Unknown resultType");
+    
+        const result = response[options.resultType];
+        return typeof result === "function" ? result.call(response) : result;
+    }
 
-    async get <ResultType>(this: HTTP, path: string, options: Partial<HTTPOptions> = {}) {
+    async get <ResultType>(this: HTTP, path: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, {...options, method: "get"});
-    },
+    }
 
-    async post <ResultType>(this: HTTP, path: string, body: string, options: Partial<HTTPOptions> = {}) {
+    async head <ResultType>(this: HTTP, path: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+        return this.request<ResultType>(path, {...options, method: "head"});
+    }
+
+    /* body'd request methods */
+
+    async post <ResultType>(this: HTTP, path: string, body: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, {...options, method: "post", body});
     }
-};
 
+    async patch <ResultType>(this: HTTP, path: string, body: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+        return this.request<ResultType>(path, {...options, method: "patch", body});
+    }
+
+    async put <ResultType>(this: HTTP, path: string, body: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+        return this.request<ResultType>(path, {...options, method: "put", body});
+    }
+
+    /* optional body'd request methods */
+
+    async delete <ResultType>(this: HTTP, path: string, body?: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+        return this.request<ResultType>(path, {...options, method: "delete", body});
+    }
+}
+
+export const http = new HTTP({}, true);
 export default http;

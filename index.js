@@ -23,42 +23,88 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import merge from "deepmerge";
-const http = {
-    options: {},
-    mutate(defaults) {
-        const clone = Object.assign({}, this);
-        clone.options = merge(clone.options, defaults);
-        return clone;
-    },
+import { compile } from "path-to-regexp";
+import deepmerge from "deepmerge";
+export let _fetch = null;
+function fetch(input, init) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!_fetch) {
+            /* if server or client side */
+            _fetch = (typeof window === "undefined") ?
+                (yield import("node-fetch")).default :
+                window.fetch;
+            _fetch.server = typeof window === "undefined";
+        }
+        return _fetch(input, init);
+    });
+}
+export class HTTP {
+    constructor(options = {}, immutable = false) {
+        this.options = options;
+        this.immutable = immutable;
+    }
+    static create(options, immutable) {
+        return new HTTP(options, immutable);
+    }
+    mutate(options) {
+        if (this.immutable)
+            throw new ReferenceError("Cannot modify; HTTP instance declared as immutable");
+        this.options = deepmerge(this.options, options);
+        return this;
+    }
+    clone(options, immutable) {
+        return new HTTP(deepmerge(this.options, options), immutable);
+    }
     request(path, options = {}) {
         return __awaiter(this, void 0, void 0, function* () {
-            const request_options = this.options.excludeDefaults ? options : merge(this.options, options);
-            const request_url = this.options.baseURL ? this.options.baseURL + path : path;
-            let { resultType } = request_options;
-            const fetch = ((typeof window === "undefined") ?
-                // @ts-ignore ?: "@types/node-fetch" causes more problems than it fixes.
-                (yield import("node-fetch")).default :
-                window.fetch);
-            const response = yield fetch(request_url, request_options);
-            if (!resultType || !Object.prototype.hasOwnProperty.call(response, resultType))
-                resultType = "response";
-            if (resultType === "response")
+            options = this.options.excludeDefaults ? options : deepmerge(this.options, options);
+            /* handle url creation */
+            const _url = new URL(path, this.options.baseURL);
+            const url = _url.pathname.includes(":") ?
+                _url.href.replace(_url.pathname, compile(_url.pathname)(options)) :
+                _url.href;
+            options.debug && console.debug({ path, url, options });
+            const response = yield fetch(url, options);
+            if (options.resultType === "response")
                 return response;
-            const result = response[resultType];
-            return typeof result === "function" ? result() : result;
+            if (!options.resultType || !response[options.resultType])
+                throw new TypeError("Unknown resultType");
+            const result = response[options.resultType];
+            return typeof result === "function" ? result.call(response) : result;
         });
-    },
+    }
     get(path, options = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             return this.request(path, Object.assign(Object.assign({}, options), { method: "get" }));
         });
-    },
+    }
+    head(path, options = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request(path, Object.assign(Object.assign({}, options), { method: "head" }));
+        });
+    }
+    /* body'd request methods */
     post(path, body, options = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             return this.request(path, Object.assign(Object.assign({}, options), { method: "post", body }));
         });
     }
-};
+    patch(path, body, options = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request(path, Object.assign(Object.assign({}, options), { method: "patch", body }));
+        });
+    }
+    put(path, body, options = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request(path, Object.assign(Object.assign({}, options), { method: "put", body }));
+        });
+    }
+    /* optional body'd request methods */
+    delete(path, body, options = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request(path, Object.assign(Object.assign({}, options), { method: "delete", body }));
+        });
+    }
+}
+export const http = new HTTP({}, true);
 export default http;
