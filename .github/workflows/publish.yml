@@ -12,4 +12,5 @@ jobs:
       - run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_ACCESS_TOKEN }}" > ~/.npmrc
       - run: git config --global user.name "rubybb"
       - run: npm whoami
+      - run: npm version minor
       - run: npm run release
