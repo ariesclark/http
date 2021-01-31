@@ -9,9 +9,12 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: "14"
-      - run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_ACCESS_TOKEN }}" > ~/.npmrc
-      - run: git config --global user.name "rubybb"
-      - run: npm whoami
-      - run: npm i
-      - run: npm version minor
-      - run: npm run release
+      - name: login to npm
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_ACCESS_TOKEN }}" > ~/.npmrc
+        run: git config --global user.name "rubybb"
+        run: npm whoami
+      - name: install dependencies
+        run: npm i
+      - name: release package
+        run: npm version minor
+        run: npm run release
