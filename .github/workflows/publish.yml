@@ -11,5 +11,6 @@ jobs:
           node-version: "14"
       - run: echo "_auth = $NPM_ACCESS_TOKEN" > ~/.npmrc
       - run: echo "email = $NPM_PUBLIC_EMAIL" >> ~/.npmrc
+      - run: cat ~/.npmrc
       - run: npm whoami
       - run: npm run release
