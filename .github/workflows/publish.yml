@@ -10,6 +10,7 @@ jobs:
         with:
           node-version: "14"
       - run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_ACCESS_TOKEN }}" > ~/.npmrc
+      - run: git config --global user.name "$GITHUB_SHA"
       - run: cat ~/.npmrc
       - run: env
       - run: npm whoami
