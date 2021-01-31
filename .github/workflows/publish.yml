@@ -10,8 +10,6 @@ jobs:
         with:
           node-version: "14"
       - run: echo "//registry.npmjs.org/:_authToken=$NPM_ACCESS_TOKEN" > ~/.npmrc
-        with: 
-          authToken: env.NPM_ACCESS_TOKEN
       - run: cat ~/.npmrc
       - run: npm whoami
       - run: npm run release
