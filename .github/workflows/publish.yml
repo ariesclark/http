@@ -9,8 +9,9 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: "14"
-      - run: echo "_auth = $NPM_ACCESS_TOKEN" > ~/.npmrc
-      - run: echo "email = $NPM_PUBLIC_EMAIL" >> ~/.npmrc
+      - run: echo "//registry.npmjs.org/:_authToken=$NPM_ACCESS_TOKEN" > ~/.npmrc
+        with: 
+          authToken: env.NPM_ACCESS_TOKEN
       - run: cat ~/.npmrc
       - run: npm whoami
       - run: npm run release
