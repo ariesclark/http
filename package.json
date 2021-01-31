@@ -7,7 +7,7 @@
   "types": "index.d.ts",
   "scripts": {
     "build": "tsc --build tsconfig.json",
-    "release": "npm run build && npm version minor && npm publish"
+    "release": "npm ci && npm run build && npm version minor && npm publish"
   },
   "repository": {
     "type": "git",

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": ["ES5", "DOM"],
+    "target": "ES6",
+    "lib": ["ES6", "DOM"],
     "strict": false,
     "esModuleInterop": true,
     "module": "esnext",
