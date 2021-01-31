@@ -31,7 +31,7 @@ export declare interface HTTPOptions extends RequestInit {
 
     debug: boolean;
 
-    /* for path/query params */
+    /* for path params */
     [key: string]: unknown
 }
 
@@ -97,21 +97,21 @@ export class HTTP {
 
     /* body'd request methods */
 
-    async post <ResultType>(this: HTTP, path: string, body: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+    async post <ResultType>(this: HTTP, path: string, body: BodyInit, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, {...options, method: "post", body});
     }
 
-    async patch <ResultType>(this: HTTP, path: string, body: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+    async patch <ResultType>(this: HTTP, path: string, body: BodyInit, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, {...options, method: "patch", body});
     }
 
-    async put <ResultType>(this: HTTP, path: string, body: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+    async put <ResultType>(this: HTTP, path: string, body: BodyInit, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, {...options, method: "put", body});
     }
 
     /* optional body'd request methods */
 
-    async delete <ResultType>(this: HTTP, path: string, body?: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+    async delete <ResultType>(this: HTTP, path: string, body?: BodyInit, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, {...options, method: "delete", body});
     }
 }
