@@ -3,5 +3,7 @@ node_modules
 .eslintrc.json
 .gitignore
 index.ts
-pnpm-lock.yaml
+LICENSE
+pnpm-lock.yamls
+test.js
 tsconfig.json
