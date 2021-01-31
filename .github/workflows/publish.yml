@@ -19,5 +19,4 @@ jobs:
           npm i
       - name: release package
         run: |
-          npm version minor
           npm run release
