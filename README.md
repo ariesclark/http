@@ -41,7 +41,7 @@ api.get("users/:id", {id: 3}).then((json) => {...});
 
 ## API
 
-**NOTE**: RequestInit refers to all native [native fetch options](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request), and BodyInit refers to a [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob), [BufferSource](https://developer.mozilla.org/en-US/docs/Web/API/BufferSource), [FormData](https://developer.mozilla.org/en-US/docs/Web/API/FormData), [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams), [USVString](https://developer.mozilla.org/en-US/docs/Web/API/USVString), or [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) object.
+**NOTE**: RequestInit refers to all [native fetch options](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request), and BodyInit refers to a [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob), [BufferSource](https://developer.mozilla.org/en-US/docs/Web/API/BufferSource), [FormData](https://developer.mozilla.org/en-US/docs/Web/API/FormData), [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams), [USVString](https://developer.mozilla.org/en-US/docs/Web/API/USVString), or [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) object.
 
 ```ts
 interface HTTPOptions extends RequestInit {
