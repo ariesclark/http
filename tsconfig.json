@@ -4,7 +4,7 @@
     "lib": ["ES6", "DOM"],
     "strict": false,
     "esModuleInterop": true,
-    "module": "esnext",
+    "module": "CommonJS",
     "declaration": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
