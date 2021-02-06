@@ -17,6 +17,7 @@
 
 import { compile } from "path-to-regexp";
 import deepmerge from "deepmerge";
+import qstr from "query-string";
 
 export declare type PartialHTTPOptions = Partial<HTTPOptions>;
 
@@ -26,6 +27,7 @@ export declare type RequestFunctionWithOptionalBody = <ResultType>(path: string,
 
 export declare interface HTTPOptions extends RequestInit {
     resultType: "response" | keyof Response;
+    query: Record<string, any>;
     excludeDefaults: boolean;
     baseURL: string;
 
@@ -69,20 +71,28 @@ export class HTTP {
         options = this.options.excludeDefaults ? options : deepmerge(this.options, options);
         
         /* handle url creation */
-        const _url = new URL(path, this.options.baseURL);
-        const url = _url.pathname.includes(":") ? 
-            _url.href.replace(_url.pathname, compile(_url.pathname)(options)) :
-            _url.href;
-            
+        const initialURL = new URL(path, this.options.baseURL);
+        let url = initialURL.pathname.includes(":") ? 
+            initialURL.href.replace(initialURL.pathname, compile(initialURL.pathname)(options)) :
+            initialURL.href;
+
+        /* handle generation of query string */
+        if (options.query) url += ("?" + qstr.stringify(options.query));
+
         options.debug && console.debug({path, url, options});
-        
         const response = await fetch(url, options);
 
         if (options.resultType === "response") return (response as unknown) as ResultType; 
-        if (!options.resultType || !response[options.resultType]) throw new TypeError("Unknown resultType");
-    
-        const result = response[options.resultType];
-        return typeof result === "function" ? result.call(response) : result;
+        if (!options.resultType || !response[options.resultType]) throw new TypeError(`Unknown resultType (got: ${options.resultType})`);
+
+        const initialResult = response[options.resultType];
+
+        if (typeof initialResult === "function") {
+            try { return initialResult.call(response); } 
+            catch (_) { throw new TypeError("Failed to cast result via function, perhaps data isn't what was expected?"); }
+        }
+
+        return initialResult as unknown as ResultType;
     }
 
     async get <ResultType>(this: HTTP, path: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {

@@ -6,6 +6,6 @@ const api = HTTP.create({
     debug: true
 });
 
-api.get("users/:id?limit=5", {id: "ruby"}).then((json) => {
+api.get("users/:id", {query: {limit: 5}, id: "ruby"}).then((json) => {
     console.log(json);
 });
