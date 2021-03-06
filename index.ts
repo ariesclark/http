@@ -24,13 +24,22 @@ export declare type RequestFunction = <ResultType>(path: string, options?: Parti
 export declare type RequestFunctionWithBody = <ResultType>(path: string, body: string, options?: PartialHTTPOptions) => Promise<ResultType>;
 export declare type RequestFunctionWithOptionalBody = <ResultType>(path: string, body?: string, options?: PartialHTTPOptions) => Promise<ResultType>;
 
+export declare type ResultType = "response" | keyof Response;
+
 export declare interface HTTPOptions extends RequestInit {
-    resultType: "response" | keyof Response;
+    resultType: ResultType;
     query: Record<string, any>;
     excludeDefaults: boolean;
     baseURL: string;
 
+    /* logs loads of information to console. */
     debug: boolean;
+    
+    /* 
+        disables features like path name mutation,
+        request transforms, and other various things.
+    */
+    minimal: boolean;
 
     /* for path params */
     [key: string]: unknown
@@ -46,6 +55,33 @@ async function fetch (input: RequestInfo, init?: RequestInit): Promise<Response>
     }
 
     return _fetch(input, init);
+}
+
+class HTTPError extends Error {
+    public name: string = "HTTPError";
+    
+    public method: string;
+    /* we're a teapot, unless otherwise specified. :) */
+    public status: number = 418;
+
+    constructor (public url: string, options: PartialHTTPOptions, response?: Response, public body?: unknown, message?: string) {
+        super(message ? message : `Request failed (${options.method.toUpperCase()} ${url})`);
+
+        this.method = options.method.toUpperCase();
+        if (response) this.status = response.status;
+    }
+
+    public toJSON () {
+        return {
+            message: this.message,
+            status: this.status,
+            method: this.method,
+            url: this.url,
+            body: (typeof this.body !== "undefined" ? 
+                this.body : null
+            ),
+        }
+    }
 }
 
 export class HTTP {
@@ -66,12 +102,12 @@ export class HTTP {
         return new HTTP(deepmerge(this.options, options), immutable);
     }
 
-    private async request <ResultType>(this: HTTP, path: string, options: PartialHTTPOptions = {}): Promise<ResultType> {
+    private async request <T = unknown>(this: HTTP, path: string, options: PartialHTTPOptions = {}): Promise<T> {
         options = this.options.excludeDefaults ? options : deepmerge(this.options, options);
         
         /* handle url creation */
         const initialURL = new URL(path, this.options.baseURL);
-        let url = initialURL.pathname.includes(":") ? 
+        let url = (!options.minimal && initialURL.pathname.includes(":")) ? 
             initialURL.href.replace(initialURL.pathname, compile(initialURL.pathname)(options)) :
             initialURL.href;
 
@@ -81,17 +117,18 @@ export class HTTP {
         options.debug && console.debug({path, url, options});
         const response = await fetch(url, options);
 
-        if (options.resultType === "response") return (response as unknown) as ResultType; 
-        if (!options.resultType || !response[options.resultType]) throw new TypeError(`Unknown resultType (got: ${options.resultType})`);
+        if (options.resultType === "response") return response as unknown as T; 
 
-        const initialResult = response[options.resultType];
+        if (!options.resultType || !response[options.resultType]) 
+            throw new HTTPError(url, options, response, null, `Unknown resultType (${options.resultType})`);
 
-        if (typeof initialResult === "function") {
-            try { return initialResult.call(response); } 
-            catch (_) { throw new TypeError("Failed to cast result via function, perhaps data isn't what was expected?"); }
+        let result = await response[options.resultType];
+        try { result = typeof result === "function" ? (await result.call(response)) : result; } catch (error) { 
+            throw new HTTPError(url, options, response, null, `Response failed (${error.message})`); 
         }
 
-        return initialResult as unknown as ResultType;
+        if (!response.ok) throw new HTTPError(url, options, response, result);
+        return result as unknown as T;
     }
 
     async get <ResultType>(this: HTTP, path: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
