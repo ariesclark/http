@@ -49,7 +49,7 @@ async function fetch (input: RequestInfo, init?: RequestInit): Promise<Response>
 }
 
 export class HTTP {
-    constructor (private options: PartialHTTPOptions = {}, private immutable = false) {}
+    constructor (public options: PartialHTTPOptions = {}, private immutable = false) {}
 
     static create (options: PartialHTTPOptions, immutable?: boolean): HTTP {
         return new HTTP(options, immutable);
