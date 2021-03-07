@@ -19,14 +19,13 @@ import deepmerge from "deepmerge";
 import qstr from "query-string";
 
 export declare type PartialHTTPOptions = Partial<HTTPOptions>;
-
-export declare type RequestFunction = <ResultType>(path: string, options?: PartialHTTPOptions) => Promise<ResultType>;
-export declare type RequestFunctionWithBody = <ResultType>(path: string, body: string, options?: PartialHTTPOptions) => Promise<ResultType>;
-export declare type RequestFunctionWithOptionalBody = <ResultType>(path: string, body?: string, options?: PartialHTTPOptions) => Promise<ResultType>;
-
 export declare type ResultType = "response" | keyof Response;
 
-export declare interface HTTPOptions extends RequestInit {
+// export declare type RequestFunction = <ResultType>(path: string, options?: PartialHTTPOptions) => Promise<ResultType>;
+// export declare type RequestFunctionWithBody = <ResultType>(path: string, body: string, options?: PartialHTTPOptions) => Promise<ResultType>;
+// export declare type RequestFunctionWithOptionalBody = <ResultType>(path: string, body?: string, options?: PartialHTTPOptions) => Promise<ResultType>;
+
+export declare interface HTTPOptions<T = unknown> extends RequestInit {
     resultType: ResultType;
     query: Record<string, any>;
     excludeDefaults: boolean;
@@ -40,6 +39,14 @@ export declare interface HTTPOptions extends RequestInit {
         request transforms, and other various things.
     */
     minimal: boolean;
+
+    nothrow: boolean;
+
+    events?: {
+        override?: boolean;
+        pre?: (this: HTTP, path: string, options: PartialHTTPOptions) => Promise<boolean>;
+        post?: (this: HTTP, result: any, path: string, options: PartialHTTPOptions) => Promise<typeof result>;
+    }
 
     /* for path params */
     [key: string]: unknown
@@ -59,7 +66,7 @@ async function fetch (input: RequestInfo, init?: RequestInit): Promise<Response>
 
 class HTTPError extends Error {
     public name: string = "HTTPError";
-    
+
     public method: string;
     /* we're a teapot, unless otherwise specified. :) */
     public status: number = 418;
@@ -102,8 +109,38 @@ export class HTTP {
         return new HTTP(deepmerge(this.options, options), immutable);
     }
 
-    private async request <T = unknown>(this: HTTP, path: string, options: PartialHTTPOptions = {}): Promise<T> {
-        options = this.options.excludeDefaults ? options : deepmerge(this.options, options);
+    private async request <T = unknown>(this: HTTP, path: string, options: PartialHTTPOptions = {}): Promise<null | T> {
+        const _options = options; /* the options passed to the request function, without being merged into defaults */
+        options = this.options.excludeDefaults ? _options : deepmerge(this.options, _options);
+
+        /* event override fix */
+        if (!options.minimal && (this.options.events && !options.events?.override)) {
+
+            /* pre request event hook */
+            if (this.options.events.pre && _options.events.pre) {
+                options.events.pre = async (path: string, options: PartialHTTPOptions): Promise<boolean> => {
+                    let _cancelled = await this.options.events.pre.apply(this, [path, options]) === false;
+                    if (!_cancelled) return await _options.events.pre.apply(this, [path, options]);
+                }
+            }
+
+            /* post request event hook */
+            if (this.options.events.post && _options.events.post) {
+                options.events.post = async (result: any, path: string, options: PartialHTTPOptions) => {
+                    const _result = await this.options.events.post.apply(this, [result, path, options]);
+                    return await _options.events.post.apply(this, [
+                        typeof _result !== "undefined" ? _result : result, 
+                        path, options
+                    ]);
+                }
+            }
+        }
+
+        // emit pre request event
+        if (!options.minimal && (typeof options.events?.pre === "function")) {
+            const cancelled: boolean = (await options.events.pre.apply(this, [path, options]) === false);
+            if (cancelled) return null;
+        }
         
         /* handle url creation */
         const initialURL = new URL(path, this.options.baseURL);
@@ -114,49 +151,57 @@ export class HTTP {
         /* handle generation of query string */
         if (options.query) url += ("?" + qstr.stringify(options.query));
 
-        options.debug && console.debug({path, url, options});
+        options.debug && console.debug(options.method, url, {path, options});
         const response = await fetch(url, options);
 
-        if (options.resultType === "response") return response as unknown as T; 
-
         if (!options.resultType || !response[options.resultType]) 
-            throw new HTTPError(url, options, response, null, `Unknown resultType (${options.resultType})`);
+            /* nothrow doesn't matter here because this is not a response error 
+               the function is being passed invalid paramaters, this should never fail silently. */
+            throw new TypeError(`Unknown resultType (${options.resultType})`);
 
-        let result = await response[options.resultType];
+        let result = options.resultType === "response" ? response : await response[options.resultType];
         try { result = typeof result === "function" ? (await result.call(response)) : result; } catch (error) { 
-            throw new HTTPError(url, options, response, null, `Response failed (${error.message})`); 
+            if (!options.nothrow) throw new HTTPError(url, options, response, null, `Response failed (${error.message})`); 
+            result = null;
         }
 
-        if (!response.ok) throw new HTTPError(url, options, response, result);
+        // emit pre request event
+        if (!options.minimal && (typeof options.events?.post === "function")) {
+            let _result = await options.events.post.apply(this, [result, path, options]);
+            if (typeof _result !== "undefined")
+                result = _result;
+        }
+
+        if (!response.ok && !options.nothrow) throw new HTTPError(url, options, response, result);
         return result as unknown as T;
     }
 
     async get <ResultType>(this: HTTP, path: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
-        return this.request<ResultType>(path, {...options, method: "get"});
+        return this.request<ResultType>(path, {...options, method: "GET"});
     }
 
     async head <ResultType>(this: HTTP, path: string, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
-        return this.request<ResultType>(path, {...options, method: "head"});
+        return this.request<ResultType>(path, {...options, method: "HEAD"});
     }
 
     /* body'd request methods */
 
     async post <ResultType>(this: HTTP, path: string, body: BodyInit, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
-        return this.request<ResultType>(path, {...options, method: "post", body});
+        return this.request<ResultType>(path, {...options, method: "POST", body});
     }
 
     async patch <ResultType>(this: HTTP, path: string, body: BodyInit, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
-        return this.request<ResultType>(path, {...options, method: "patch", body});
+        return this.request<ResultType>(path, {...options, method: "PATCH", body});
     }
 
     async put <ResultType>(this: HTTP, path: string, body: BodyInit, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
-        return this.request<ResultType>(path, {...options, method: "put", body});
+        return this.request<ResultType>(path, {...options, method: "PUT", body});
     }
 
     /* optional body'd request methods */
 
     async delete <ResultType>(this: HTTP, path: string, body?: BodyInit, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
-        return this.request<ResultType>(path, {...options, method: "delete", body});
+        return this.request<ResultType>(path, {...options, method: "DELETE", body});
     }
 }
 
