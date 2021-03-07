@@ -44,12 +44,29 @@ api.get("users/:id", {id: 3}).then((json) => {...});
 **NOTE**: RequestInit refers to all [native fetch options](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request), and BodyInit refers to a [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob), [BufferSource](https://developer.mozilla.org/en-US/docs/Web/API/BufferSource), [FormData](https://developer.mozilla.org/en-US/docs/Web/API/FormData), [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams), [USVString](https://developer.mozilla.org/en-US/docs/Web/API/USVString), or [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) object.
 
 ```ts
-interface HTTPOptions extends RequestInit {
-    resultType: "response" | keyof Response;
+export declare interface HTTPOptions extends RequestInit {
+    resultType: ResultType;
+    query: Record<string, any>;
     excludeDefaults: boolean;
     baseURL: string;
 
+    /* logs loads of information to console. */
     debug: boolean;
+    
+    /* 
+        disables features like path name mutation,
+        request transforms, and other various things.
+    */
+    minimal: boolean;
+
+    /* prevents requests from throwing on response errors. */
+    nothrow: boolean;
+
+    events?: {
+        override?: boolean;
+        pre?: (this: HTTP, path: string, options: PartialHTTPOptions) => Promise<boolean>;
+        post?: (this: HTTP, result: any, path: string, options: PartialHTTPOptions) => Promise<typeof result>;
+    }
 
     /* for path params */
     [key: string]: unknown

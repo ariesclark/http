@@ -25,7 +25,7 @@ export declare type ResultType = "response" | keyof Response;
 // export declare type RequestFunctionWithBody = <ResultType>(path: string, body: string, options?: PartialHTTPOptions) => Promise<ResultType>;
 // export declare type RequestFunctionWithOptionalBody = <ResultType>(path: string, body?: string, options?: PartialHTTPOptions) => Promise<ResultType>;
 
-export declare interface HTTPOptions<T = unknown> extends RequestInit {
+export declare interface HTTPOptions extends RequestInit {
     resultType: ResultType;
     query: Record<string, any>;
     excludeDefaults: boolean;
@@ -40,6 +40,7 @@ export declare interface HTTPOptions<T = unknown> extends RequestInit {
     */
     minimal: boolean;
 
+    /* prevents requests from throwing on response errors. */
     nothrow: boolean;
 
     events?: {
