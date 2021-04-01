@@ -31,7 +31,7 @@ files.map((file, index) => {
 });
 
 const headers = {
-    "authorization": "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",
+    "authorization": "<redacted>",
     ...form.getHeaders()
 }
 
@@ -40,6 +40,7 @@ console.log({form, files})
 http.post("https://api.modrinth.com/api/v1/version", form, {
     debug: true,
     resultType: "json",
+    
     headers
 }).then(async r => {
     console.log(r);

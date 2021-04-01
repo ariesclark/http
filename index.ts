@@ -24,7 +24,6 @@ import qstr from "query-string";
 
 export type PartialHTTPOptions = Partial<HTTPOptions>;
 export type ResultType = "response" | keyof Response;
-export type Body = FormData | BodyInit; 
 
 export declare interface HTTPOptions extends Omit<RequestInit, "body"> {
     resultType: ResultType;
@@ -87,7 +86,7 @@ export class HTTP {
         return new HTTP(deepmerge(this.options, options), immutable);
     }
 
-    private async request<T = unknown>(this: HTTP, path: string, options: PartialHTTPOptions = {}, body: any): Promise<null | T> {
+    private async request<T = unknown>(this: HTTP, path: string, options: PartialHTTPOptions = {}, body: unknown): Promise<null | T> {
         const _options = options; /* the options passed to the request function, without being merged into defaults */
         options = this.options.excludeDefaults ? _options : deepmerge(this.options, _options);
 
@@ -101,7 +100,7 @@ export class HTTP {
         if (options.query) url += ("?" + qstr.stringify(options.query));
 
         options.debug && console.debug(options.method, url, { path, options });
-        const response: Response = await fetch(url, {...options, body});
+        const response: Response = await fetch(url, { ...options, body: (body as BodyInit) });
 
         if (!options.resultType || !response[options.resultType])
             /* nothrow doesn't matter here because this is not a response error 
@@ -128,21 +127,21 @@ export class HTTP {
 
     /* body'd request methods */
 
-    async post<ResultType>(this: HTTP, path: string, body: any, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+    async post<ResultType>(this: HTTP, path: string, body: unknown, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, { ...options, method: "POST" }, body);
     }
 
-    async patch<ResultType>(this: HTTP, path: string, body: any, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+    async patch<ResultType>(this: HTTP, path: string, body: unknown, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, { ...options, method: "PATCH" }, body);
     }
 
-    async put<ResultType>(this: HTTP, path: string, body: any, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+    async put<ResultType>(this: HTTP, path: string, body: unknown, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, { ...options, method: "PUT" }, body);
     }
 
     /* optional body'd request methods */
 
-    async delete<ResultType>(this: HTTP, path: string, body?: Body, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
+    async delete<ResultType>(this: HTTP, path: string, body?: unknown, options: Partial<HTTPOptions> = {}): Promise<ResultType> {
         return this.request<ResultType>(path, { ...options, method: "DELETE" }, body);
     }
 }
