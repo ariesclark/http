@@ -1,7 +1,7 @@
 {
   "name": "@rubybb/http",
   "type": "commonjs",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "description": "Simple, small and extendable http library for sending requests.",
   "main": "index.js",
   "types": "index.d.ts",
