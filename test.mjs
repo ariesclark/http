@@ -1,21 +1,55 @@
-import { HTTP } from "./index.js";
+import { HTTP, http } from "./index.js";
+import fetch from "cross-fetch";
+//import fetch from "node-fetch"
 
-const api = HTTP.create({
-    resultType: "json",
-    debug: true
-});
+import FormData from "form-data";
+const form = new FormData();
 
-api.get("https://api.github.com/repos/altar-gg/tickets/issues/35", {
-    nothrow: true,
-    events: {
-        pre: async function () {
-            console.log("pre", {arguments});
-            return true;
-        },
-        post: async function () {
-            console.log("post", {arguments});
-        }
+const body = {
+    "version_title": "gfdfdgdf", 
+    "version_number": "dfgfdgdfg", 
+    "release_channel": "release", 
+    "loaders": ["fabric"], 
+    "game_versions": ["21w06a"], 
+    "mod_id": "XZCiVOi9", 
+    "dependencies": [], 
+    "featured": false
+};
+
+const files = [{ name: "test.jar", data: "aaa" }];
+
+form.append("data", JSON.stringify({
+    ...body, ...{
+        file_parts: files.map((file, index) => `${file.name}-${index}`)
     }
-}).then((json) => {
-    console.log(json);
+}));
+
+files.map((file, index) => {
+    form.append(`${file.name}-${index}`, file.data, {
+        filename: file.name,
+    });
 });
+
+const headers = {
+    "authorization": "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",
+    ...form.getHeaders()
+}
+
+console.log({form, files})
+
+http.post("https://api.modrinth.com/api/v1/version", form, {
+    debug: true,
+    resultType: "json",
+    headers
+}).then(async r => {
+    console.log(r);
+});
+
+/* fetch("https://api.modrinth.com/api/v1/version", {
+    method: "POST",
+    body: form,
+    headers
+}).then(async r => {
+    console.log(r)
+    console.log(await r.json())
+}) */
